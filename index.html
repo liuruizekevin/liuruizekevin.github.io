@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clevis Vector Graphics Editor By Group 3</title>
+    <style>
+        body{
+            font-family:Arial,sans-serif;
+            line-height:1.6;
+            margin:20px;
+            color:#333;
+            max-width:1200px;
+            margin:0 auto;
+            padding:20px;
+        }
+        .header{
+            background-color:#f5f5f5;
+            padding:15px;
+            border-radius:5px;
+            margin-bottom:20px;
+        }
+        .control-panel{
+            background-color:#f0f8ff;
+            padding:15px;
+            border-radius:5px;
+            margin-bottom:20px;
+            border:1px solid #cce5ff;
+        }
+        #commandInput{
+            width:70%;
+            padding:8px;
+            margin-right:10px;
+            font-size:14px;
+        }
+        #submitBtn{
+            padding:8px 16px;
+            background-color:#4CAF50;
+            color:white;
+            border:none;
+            border-radius:4px;
+            cursor:pointer;
+            font-size:14px;
+        }
+        #submitBtn:hover{
+            background-color:#45a049;
+        }
+        .result-area{
+            margin:15px 0;
+            padding:10px;
+            min-height:50px;
+            border:1px solid #ddd;
+            border-radius:4px;
+            background-color:#fff;
+        }
+        .log-section{
+            margin:20px 0;
+        }
+        .log-entry{
+            margin:5px 0;
+            padding:8px;
+            background-color:#fafafa;
+            border-left:3px solid #4CAF50;
+            border-radius:0 4px 4px 0;
+        }
+        .error{
+            border-left-color:#ff4444;
+            background-color:#fff5f5;
+        }
+        .help-section{
+            background-color:#f9f9f9;
+            padding:15px;
+            border-radius:5px;
+            margin-top:20px;
+            font-size:14px;
+        }
+        .shape-preview{
+            margin:20px 0;
+            padding:15px;
+            border:1px dashed #ccc;
+            border-radius:5px;
+            min-height:300px;
+            background-color:#fefefe;
+            position:relative;
+            overflow:hidden;
+        }
+        h3{
+            color:#2c3e50;
+            border-bottom:1px solid #eee;
+            padding-bottom:5px;
+        }
+        .shape-element{
+            transition:all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1>Clevis Vector Graphics Editor By Group 3</h1>
+    <p>A web-based tool for creating and manipulating vector graphics shapes</p>
+</div>
+
+<div class="control-panel">
+    <h3>Command Input</h3>
+    <input type="text" id="commandInput" placeholder="Enter command (e.g., 'rectangle r1 0 0 100 50' or 'help')">
+    <button id="submitBtn">Execute</button>
+
+    <div class="result-area" id="resultArea">
+        Enter a command and click "Execute". Type 'help' for commands.
+    </div>
+</div>
+
+<div class="shape-preview">
+    <h3>Shape Display</h3>
+    <div id="previewContainer">
+        No shapes to display. Create a shape using commands (e.g., 'rectangle r1 10 10 80 40').
+    </div>
+</div>
+<div class="log-section">
+    <h3>Log</h3>
+    <div id="logContainer">
+    </div>
+</div>
+<div class="help-section">
+    <h3>Commands</h3>
+    <pre>
+rectangle 'id' 'x' 'y' 'w' 'h' - Create rectangle
+circle 'id' 'x' 'y' 'r' - Create circle
+line 'id' 'x1' 'y1' 'x2' 'y2' - Create line
+square 'id' 'x' 'y' 'side' - Create square
+group 'id' 'member1' 'member2' ... - Create group of shapes (multiple members allowed)
+move 'id' 'dx' 'dy' - Move shape by (dx,dy)
+list - List all shapes
+bbox 'id' - Show bounding box
+delete 'id' - Delete shape
+color 'id' 'hex-color' - Change shape color (e.g., color r1 #ff0000 or color c1 #f0f)
+help - Show this message
+clear - Clear preview area
+        </pre>
+</div>
+
+<script>
+    class Shape{
+        constructor(id){
+            this.id=id;
+            this.color=this.getDefaultColor();
+        }
+        getDefaultColor(){
+            return '#333333';
+        }
+        move(dx,dy){}
+        getBoundingBox(){}
+        getType(){}
+        toString(){}
+        draw(container,resultArea){}
+        hexToRgb(hex){
+            const result=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result?{
+                r:parseInt(result[1],16),
+                g:parseInt(result[2],16),
+                b:parseInt(result[3],16)
+            }:{r:0,g:0,b:0};
+        }
+    }
+
+    class Rectangle extends Shape{
+        constructor(id,x,y,width,height){
+            super(id);
+            this.x=parseInt(x);
+            this.y=parseInt(y);
+            this.width=parseInt(width);
+            this.height=parseInt(height);
+        }
+        getDefaultColor(){
+            return '#2196F3';
+        }
+        move(dx,dy){
+            this.x=this.x+dx;
+            this.y=this.y+dy;
+        }
+        getBoundingBox(){
+            return `(${this.x},${this.y})-(${this.x+this.width},${this.y+this.height})`;
+        }
+        getType(){return 'rectangle';}
+        toString(){
+            return `Rectangle ${this.id}: (${this.x},${this.y}), width=${this.width}, height=${this.height}, color=${this.color}`;
+        }
+        draw(container,resultArea){
+            const div=document.createElement('div');
+            div.id=this.id;
+            div.style.position='absolute';
+            div.style.left=`${this.x}px`;
+            div.style.top=`${this.y}px`;
+            div.style.width=`${this.width}px`;
+            div.style.height=`${this.height}px`;
+            div.style.border=`2px solid ${this.color}`;
+            const rgb=this.hexToRgb(this.color);
+            div.style.backgroundColor=`rgba(${rgb.r},${rgb.g},${rgb.b},0.1)`;
+            div.title=this.toString();
+            div.style.transition='border-color 0.3s, box-shadow 0.3s';
+            div.style.cursor='pointer';
+
+            div.addEventListener('mouseover',()=>{
+                div.style.borderColor='#ff9800';
+            });
+            div.addEventListener('mouseout',()=>{
+                div.style.borderColor=this.color;
+            });
+            div.addEventListener('click',(e)=>{
+                e.stopPropagation();
+                if(resultArea){
+                    resultArea.textContent=`Selected: ${this.toString()}`;
+                    resultArea.style.color='#2c3e50';
+                }
+                container.querySelectorAll('.shape-element').forEach(el=>{
+                    el.style.boxShadow='none';
+                });
+                div.classList.add('shape-element');
+                div.style.boxShadow='0 0 0 2px #ff9800, 0 0 10px rgba(255,152,0,0.3)';
+            });
+
+            container.appendChild(div);
+        }
+    }
+
+    class Circle extends Shape{
+        constructor(id,x,y,radius){
+            super(id);
+            this.x=parseInt(x);
+            this.y=parseInt(y);
+            this.radius=parseInt(radius);
+        }
+        getDefaultColor(){
+            return '#f44336';
+        }
+        move(dx,dy){
+            this.x=this.x+dx;
+            this.y=this.y+dy;
+        }
+        getBoundingBox(){
+            return `(${(this.x-this.radius)},${(this.y-this.radius)})-(${(this.x+this.radius)},${(this.y+this.radius)})`;
+        }
+        getType(){return 'circle';}
+        toString(){
+            return `Circle ${this.id}: (${this.x},${this.y}), radius=${this.radius}, color=${this.color}`;
+        }
+        draw(container,resultArea){
+            const div=document.createElement('div');
+            div.id=this.id;
+            div.style.position='absolute';
+            div.style.left=`${this.x-this.radius}px`;
+            div.style.top=`${this.y-this.radius}px`;
+            div.style.width=`${this.radius*2}px`;
+            div.style.height=`${this.radius*2}px`;
+            div.style.border=`2px solid ${this.color}`;
+            div.style.borderRadius='50%';
+            const rgb=this.hexToRgb(this.color);
+            div.style.backgroundColor=`rgba(${rgb.r},${rgb.g},${rgb.b},0.1)`;
+            div.title=this.toString();
+            div.style.transition='border-color 0.3s, box-shadow 0.3s';
+            div.style.cursor='pointer';
+
+            div.addEventListener('mouseover',()=>{
+                div.style.borderColor='#ff9800';
+            });
+            div.addEventListener('mouseout',()=>{
+                div.style.borderColor=this.color;
+            });
+            div.addEventListener('click',(e)=>{
+                e.stopPropagation();
+                if(resultArea){
+                    resultArea.textContent=`Selected: ${this.toString()}`;
+                    resultArea.style.color='#2c3e50';
+                }
+                container.querySelectorAll('.shape-element').forEach(el=>{
+                    el.style.boxShadow='none';
+                });
+                div.classList.add('shape-element');
+                div.style.boxShadow='0 0 0 2px #ff9800, 0 0 10px rgba(255,152,0,0.3)';
+            });
+
+            container.appendChild(div);
+        }
+    }
+
+    class Line extends Shape{
+        constructor(id,x1,y1,x2,y2){
+            super(id);
+            this.x1=parseInt(x1);
+            this.y1=parseInt(y1);
+            this.x2=parseInt(x2);
+            this.y2=parseInt(y2);
+        }
+        getDefaultColor(){
+            return '#4CAF50';
+        }
+        move(dx,dy){
+            this.x1=this.x1+dx;
+            this.y1=this.y1+dy;
+            this.x2=this.x2+dx;
+            this.y2=this.y2+dy;
+        }
+        getBoundingBox(){
+            const minX=Math.min(this.x1,this.x2);
+            const minY=Math.min(this.y1,this.y2);
+            const maxX=Math.max(this.x1,this.x2);
+            const maxY=Math.max(this.y1,this.y2);
+            return `(${minX},${minY})-(${maxX},${maxY})`;
+        }
+        getType(){return 'line';}
+        toString(){
+            return `Line ${this.id}: (${this.x1},${this.y1}) to (${this.x2},${this.y2}), color=${this.color}`;
+        }
+        draw(container,resultArea){
+            let svg=container.querySelector('svg.line-container');
+            if(!svg){
+                svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+                svg.className='line-container';
+                svg.style.position='absolute';
+                svg.style.left='0';
+                svg.style.top='0';
+                svg.style.width='100%';
+                svg.style.height='100%';
+                svg.style.pointerEvents='auto';
+                container.appendChild(svg);
+            }
+
+            const existingLine=svg.querySelector(`#${this.id}`);
+            if(existingLine){
+                svg.removeChild(existingLine);
+            }
+
+            const line=document.createElementNS("http://www.w3.org/2000/svg","line");
+            line.setAttribute('id',this.id);
+            line.setAttribute('x1',this.x1);
+            line.setAttribute('y1',this.y1);
+            line.setAttribute('x2',this.x2);
+            line.setAttribute('y2',this.y2);
+            line.setAttribute('stroke',this.color);
+            line.setAttribute('stroke-width','4');
+            line.setAttribute('stroke-linecap','round');
+            line.title=this.toString();
+            line.style.transition='stroke 0.3s, stroke-width 0.3s';
+            line.style.cursor='pointer';
+
+            line.addEventListener('mouseover',()=>{
+                line.setAttribute('stroke','#ff9800');
+            });
+            line.addEventListener('mouseout',()=>{
+                line.setAttribute('stroke',this.color);
+            });
+            line.addEventListener('click',(e)=>{
+                e.stopPropagation();
+                if(resultArea){
+                    resultArea.textContent=`Selected: ${this.toString()}`;
+                    resultArea.style.color='#2c3e50';
+                }
+                container.querySelectorAll('.shape-element, svg line').forEach(el=>{
+                    if(el.tagName==='LINE'&&el.id!==this.id){
+                        el.setAttribute('stroke-width','4');
+                    }else if(el.classList.contains('shape-element')){
+                        el.style.boxShadow='none';
+                    }
+                });
+                line.classList.add('shape-element');
+                line.setAttribute('stroke-width','6');
+            });
+
+            svg.appendChild(line);
+        }
+    }
+
+    class Square extends Rectangle{
+        constructor(id,x,y,side){
+            super(id,x,y,side,side);
+        }
+        getDefaultColor(){
+            return '#ffc107';
+        }
+        getType(){return 'square';}
+        toString(){
+            return `Square ${this.id}: (${this.x},${this.y}), side=${this.width}, color=${this.color}`;
+        }
+    }
+
+    class Group extends Shape{
+        constructor(id,members){
+            super(id);
+            this.members=members;
+        }
+        getDefaultColor(){
+            return '#9c27b0';
+        }
+        move(dx,dy){
+            this.members.forEach(member=>member.move(dx,dy));
+        }
+        getBoundingBox(){
+            if(this.members.length===0)return "(0,0)-(0,0)";
+            let minX,minY,maxX,maxY;
+            this.members.forEach(member=>{
+                const bbox=member.getBoundingBox();
+                const [p1,p2]=bbox.split('-');
+                const [x1,y1]=p1.replace(/[()]/g,'').split(',').map(Number);
+                const [x2,y2]=p2.replace(/[()]/g,'').split(',').map(Number);
+
+                minX=minX===undefined?x1:Math.min(minX,x1);
+                minY=minY===undefined?y1:Math.min(minY,y1);
+                maxX=maxX===undefined?x2:Math.max(maxX,x2);
+                maxY=maxY===undefined?y2:Math.max(maxY,y2);
+            });
+            return `(${minX},${minY})-(${maxX},${maxY})`;
+        }
+        getType(){return 'group';}
+        toString(){
+            return `Group ${this.id} with ${this.members.length} members: ${this.members.map(m=>m.id).join(', ')}`;
+        }
+        draw(container){
+            this.members.forEach(member=>member.draw(container));
+        }
+    }
+
+    // Main Clevis controller
+    class ClevisController{
+        constructor(logContainer,previewContainer,resultArea){
+            this.shapes=new Map();
+            this.commandLog=[];
+            this.logContainer=logContainer;
+            this.previewContainer=previewContainer;
+            this.resultArea=resultArea;
+
+            this.logCommand(" System initialized");
+            this.updateLogDisplay();
+        }
+
+        logCommand(message){
+            const date=new Date();
+            const formattedDate=date.toISOString().slice(0,10)+' '+date.toTimeString().slice(0,8);
+            const logEntry=`[${formattedDate}]${message}`;
+            this.commandLog.push(logEntry);
+            this.updateLogDisplay();
+        }
+
+        updateLogDisplay(){
+            this.logContainer.innerHTML='';
+            this.commandLog.forEach(entry=>{
+                const div=document.createElement('div');
+                div.className=entry.includes('Error')?'log-entry error':'log-entry';
+                div.textContent=entry;
+                this.logContainer.appendChild(div);
+            });
+            this.logContainer.scrollTop=this.logContainer.scrollHeight;
+        }
+
+        updatePreview(){
+            this.previewContainer.innerHTML='';
+            if(this.shapes.size===0){
+                this.previewContainer.innerHTML='No shapes to display. Create a shape using commands (e.g., \'rect r1 10 10 80 40\').';
+                return;
+            }
+
+            this.shapes.forEach(shape=>{
+                if(!(shape instanceof Group)){
+                    shape.draw(this.previewContainer,this.resultArea);
+                }
+            });
+
+            this.shapes.forEach(shape=>{
+                if(shape instanceof Group){
+                    this.drawGroupBorder(shape,this.previewContainer);
+                }
+            });
+
+            this.previewContainer.addEventListener('click',()=>{
+                this.previewContainer.querySelectorAll('.shape-element').forEach(el=>{
+                    if(el.tagName==='LINE'){
+                        el.setAttribute('stroke-width','4');
+                    }else{
+                        el.style.boxShadow='none';
+                    }
+                });
+                this.resultArea.textContent='No shape selected';
+                this.resultArea.style.color='#333';
+            });
+        }
+
+        drawGroupBorder(group,container){
+            const bbox=group.getBoundingBox();
+            const [p1,p2]=bbox.split('-');
+            const [x1,y1]=p1.replace(/[()]/g,'').split(',').map(Number);
+            const [x2,y2]=p2.replace(/[()]/g,'').split(',').map(Number);
+            const width=x2-x1;
+            const height=y2-y1;
+
+            const div=document.createElement('div');
+            div.id=`group-${group.id}`;
+            div.style.position='absolute';
+            div.style.left=`${x1}px`;
+            div.style.top=`${y1}px`;
+            div.style.width=`${width}px`;
+            div.style.height=`${height}px`;
+            div.style.border=`2px dashed ${group.color}`;
+            div.style.backgroundColor='rgba(156,39,176,0.05)';
+            div.style.pointerEvents='none';
+            div.title=group.toString();
+            container.appendChild(div);
+        }
+
+        processCommand(command){
+            try{
+                if(!command||command.trim()===''){
+                    throw new Error("Empty command");
+                }
+
+                const parts=command.trim().split(/\s+/);
+                const cmd=parts[0].toLowerCase();
+                let result;
+
+                switch(cmd){
+                    case 'rectangle':
+                        result=this.addShape(parts);
+                        break;
+                    case 'circle':
+                        result=this.addShape(parts);
+                        break;
+                    case 'line':
+                        result=this.addShape(parts);
+                        break;
+                    case 'square':
+                        result=this.addShape(parts);
+                        break;
+                    case 'group':
+                        if(parts.length<3)throw new Error("Usage: group <id> <member1> [member2...]");
+                        result=this.groupShapes(parts[1],parts.slice(2));
+                        break;
+                    case 'move':
+                        if(parts.length!==4)throw new Error("Usage: move <id> <dx> <dy>");
+                        result=this.moveShape(parts[1],parseInt(parts[2]),parseInt(parts[3]));
+                        break;
+                    case 'list':
+                        result=this.listShapes();
+                        break;
+                    case 'bbox':
+                        if(parts.length!==2)throw new Error("Usage: bbox <id>");
+                        result=this.getBoundingBox(parts[1]);
+                        break;
+                    case 'delete':
+                        if(parts.length!==2)throw new Error("Usage: delete <id>");
+                        result=this.deleteShape(parts[1]);
+                        break;
+                    case 'color':
+                        if(parts.length!==3)throw new Error("Usage: color <id> <hex-color> (e.g., color r1 #ff0000 or color c1 #f0f)");
+                        result=this.changeColor(parts[1],parts[2]);
+                        break;
+                    case 'help':
+                        result="See help section below for available commands";
+                        break;
+                    case 'clear':
+                        this.shapes.clear();
+                        result="Preview cleared";
+                        this.updatePreview();
+                        break;
+                    default:
+                        throw new Error(`Unknown command '${cmd}'. Type 'help' for instructions`);
+                }
+
+                this.logCommand(result);
+                this.resultArea.textContent=result;
+                this.resultArea.style.color='#333';
+                this.updatePreview();
+                return result;
+
+            }catch(error){
+                const errorMessage=`Error: ${error.message}`;
+                this.logCommand(errorMessage);
+                this.resultArea.textContent=errorMessage;
+                this.resultArea.style.color='#d32f2f';
+                setTimeout(()=>{
+                    this.resultArea.style.color='#333';
+                },3000);
+                return errorMessage;
+            }
+        }
+
+        addShape(params){
+            const type=params[0].toLowerCase();
+            if(params.length<2)throw new Error("Missing shape ID");
+
+            let shape;
+            switch(type){
+                case 'rectangle':
+                    if(params.length!==6)throw new Error("Usage: rect <id> <x> <y> <w> <h>");
+                    shape=new Rectangle(params[1],params[2],params[3],params[4],params[5]);
+                    break;
+                case 'circle':
+                    if(params.length!==5)throw new Error("Usage: circle <id> <x> <y> <r>");
+                    shape=new Circle(params[1],params[2],params[3],params[4]);
+                    break;
+                case 'line':
+                    if(params.length!==6)throw new Error("Usage: line <id> <x1> <y1> <x2> <y2>");
+                    shape=new Line(params[1],params[2],params[3],params[4],params[5]);
+                    break;
+                case 'square':
+                    if(params.length!==5)throw new Error("Usage: square <id> <x> <y> <side>");
+                    shape=new Square(params[1],params[2],params[3],params[4]);
+                    break;
+                default:
+                    throw new Error(`Unknown shape type: ${type}`);
+            }
+
+            if(this.shapes.has(shape.id)){
+                throw new Error(`ID already exists: ${shape.id}`);
+            }
+            this.shapes.set(shape.id,shape);
+            return `Added ${shape.getType()} ${shape.id}`;
+        }
+
+        groupShapes(groupId,memberIds){
+            if(this.shapes.has(groupId)){
+                throw new Error(`Group ID exists: ${groupId}`);
+            }
+
+            const members=[];
+            for(const id of memberIds){
+                const shape=this.shapes.get(id);
+                if(!shape){
+                    throw new Error(`Shape not found: ${id}`);
+                }
+                if(shape instanceof Group){
+                    throw new Error(`Cannot group a group: ${id}`);
+                }
+                members.push(shape);
+            }
+
+            const group=new Group(groupId,members);
+            this.shapes.set(groupId,group);
+            return `Created group ${groupId} with ${members.length} members: ${members.map(m=>m.id).join(', ')}`;
+        }
+
+        moveShape(id,dx,dy){
+            const shape=this.shapes.get(id);
+            if(!shape){
+                throw new Error(`Shape not found: ${id}`);
+            }
+            shape.move(dx,dy);
+            return `Moved ${id} by (${dx},${dy})`;
+        }
+
+        listShapes(){
+            if(this.shapes.size===0){
+                return "No shapes in system";
+            }
+            return Array.from(this.shapes.values()).map(s=>s.toString()).join('\n');
+        }
+
+        getBoundingBox(id){
+            const shape=this.shapes.get(id);
+            if(!shape){
+                throw new Error(`Shape not found: ${id}`);
+            }
+            return `${shape.id} bounding box: ${shape.getBoundingBox()}`;
+        }
+
+        deleteShape(id){
+            const shape=this.shapes.get(id);
+            if(!shape){
+                throw new Error(`Shape not found: ${id}`);
+            }
+
+            this.shapes.forEach((s,key)=>{
+                if(s instanceof Group){
+                    const index=s.members.findIndex(m=>m.id===id);
+                    if(index!==-1){
+                        s.members.splice(index,1);
+                        if(s.members.length===0){
+                            this.shapes.delete(key);
+                            this.logCommand(`Group ${key} has no members, deleted automatically`);
+                        }else{
+                            this.logCommand(`Removed ${id} from group ${key}`);
+                        }
+                    }
+                }
+            });
+
+            this.shapes.delete(id);
+            return `Deleted ${shape.getType()} ${id}`;
+        }
+
+        changeColor(id,color){
+            const shape=this.shapes.get(id);
+            if(!shape){
+                throw new Error(`Shape not found: ${id}`);
+            }
+
+            const colorRegex=/^#?([a-f\d]{3}|[a-f\d]{6})$/i;
+            if(!colorRegex.test(color)){
+                throw new Error(`Invalid color format. Use hex color (e.g., #ff0000 or #f0f)`);
+            }
+
+            if(color.length===4){
+                color='#'+color[1]+color[1]+color[2]+color[2]+color[3]+color[3];
+            }
+
+            shape.color=color;
+            return `Changed color of ${id} to ${color}`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded',()=>{
+        const logContainer=document.getElementById('logContainer');
+        const previewContainer=document.getElementById('previewContainer');
+        const resultArea=document.getElementById('resultArea');
+        const commandInput=document.getElementById('commandInput');
+        const submitBtn=document.getElementById('submitBtn');
+
+        const clevis=new ClevisController(logContainer,previewContainer,resultArea);
+
+        submitBtn.addEventListener('click',()=>{
+            const command=commandInput.value;
+            clevis.processCommand(command);
+            commandInput.value='';
+            commandInput.focus();
+        });
+
+        commandInput.addEventListener('keypress',(e)=>{
+            if(e.key==='Enter'){
+                submitBtn.click();
+            }
+        });
+
+        commandInput.focus();
+    });
+</script>
+</body>
+</html>
