@@ -579,28 +579,36 @@ clear - Clear preview area
                 return errorMessage;
             }
         }
-
         addShape(params){
             const type=params[0].toLowerCase();
             if(params.length<2)throw new Error("Missing shape ID");
 
             let shape;
+
+            const inputX=parseInt(params[2]);
+            let inputY=parseInt(params[3]);
+
+            const InputY=inputY <80?80:inputY;
+
             switch(type){
                 case 'rectangle':
-                    if(params.length!==6)throw new Error("Usage: rect <id> <x> <y> <w> <h>");
-                    shape=new Rectangle(params[1],params[2],params[3],params[4],params[5]);
+                    if(params.length!==6)throw new Error("Usage: rectangle 'id' 'x' 'y' 'w' 'h'");
+                    shape=new Rectangle(params[1],inputX,InputY,params[4],params[5]);
                     break;
                 case 'circle':
-                    if(params.length!==5)throw new Error("Usage: circle <id> <x> <y> <r>");
-                    shape=new Circle(params[1],params[2],params[3],params[4]);
+                    if(params.length!==5)throw new Error("Usage: circle 'id' 'x' 'y' 'r'");
+                    shape=new Circle(params[1],inputX,InputY,params[4]);
                     break;
                 case 'line':
-                    if(params.length!==6)throw new Error("Usage: line <id> <x1> <y1> <x2> <y2>");
-                    shape=new Line(params[1],params[2],params[3],params[4],params[5]);
+                    if(params.length!==6)throw new Error("Usage: line 'id' 'x1' 'y1' 'x2' 'y2'");
+
+                    const y1=parseInt(params[3])<50?50:parseInt(params[3]);
+                    const y2=parseInt(params[5])<50?50:parseInt(params[5]);
+                    shape=new Line(params[1],inputX,y1,parseInt(params[4]),y2);
                     break;
                 case 'square':
-                    if(params.length!==5)throw new Error("Usage: square <id> <x> <y> <side>");
-                    shape=new Square(params[1],params[2],params[3],params[4]);
+                    if(params.length!==5)throw new Error("Usage: square 'id' 'x' 'y' 'side'");
+                    shape=new Square(params[1],inputX,InputY,params[4]);
                     break;
                 default:
                     throw new Error(`Unknown shape type: ${type}`);
@@ -612,6 +620,10 @@ clear - Clear preview area
             this.shapes.set(shape.id,shape);
             return `Added ${shape.getType()} ${shape.id}`;
         }
+
+
+
+
 
         groupShapes(groupId,memberIds){
             if(this.shapes.has(groupId)){
